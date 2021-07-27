@@ -10,6 +10,9 @@ app.use(express.json());
 app.get('/', (req,res)=>{
     return res.send('working')
 });
+app.get('/users/:id', (req,res)=>{
+    return res.send('working')
+});
 
 //USER ACCOUNTS 
 
