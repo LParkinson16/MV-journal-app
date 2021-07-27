@@ -2,15 +2,16 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const { User, JournalEntries } = require("./db");
 const { generateAccessToken } = require("./auth");
+const jwt = require("jsonwebtoken");
 
 const app = express();
 app.use(express.json());
 
 //establish connection with server
-app.get('/', (req,res)=>{
+app.get('/', (req, res) => {
     return res.send('working')
 });
-app.get('/users/:id', (req,res)=>{
+app.get('/users/:id', (req, res) => {
     return res.send('working')
 });
 
@@ -37,45 +38,42 @@ app.post('/login', async (req, res) => {
     }
 })
 
-//delete accounts
-app.delete('/users/:id', async (req,res)=>{
-   const userId = req.params.id;
-   console.log(userId)
-   const userToDelete = await User.findByPk(userId);
-   try{
-       await userToDelete.destroy();
-       res.sendStatus(200)
-   }catch{
-       res.sendStatus(500)
-   }
+//delete user accounts
+app.delete('/users/:id', async (req, res) => {
+    const user = await User.findByPk(req.params.id);
+    await user.destroy();
+    res.sendStatus(200);
 })
 
 // ENTRIES
 //create journal entry
 app.post('/users/:userId/entries', async (req, res) => {
-    const { text } = res.body;
+    const { text } = req.body;
     await JournalEntries.create({ text })
     res.sendStatus(201)
 })
 
-//show journal entries
-app.get('users/:userId/entries/entriesId', async(req, res)=>{
-    const entries = req.params.entriesId;
-    const findEntries = await entries.findByPk(entries);
-    res.send(findEntries)
-})
+//show  all user journal entries
+app.get("users/:userId/entries", async (req, res) => {
+    const UserId = req.params.userId;
+    await JournalEntry.findAll({
+        where: {
+            UserId: UserId,
+        },
+    });
+});
 
 //delete entries
-app.delete('/users/:userId/entries/:entriesId', async (req,res)=>{
+app.delete('/users/:userId/entries/:entriesId', async (req, res) => {
     const entryId = req.params.entriesId
     const entryToDelete = await JournalEntries.findByPk(entryId);
-    try{
+    try {
         await entryToDelete.destroy();
         res.sendStatus(200)
-    }catch{
+    } catch {
         res.sendStatus(500)
     }
 })
 
 
-module.exports = app
+    module.exports = app
