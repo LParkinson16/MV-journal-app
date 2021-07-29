@@ -1,8 +1,10 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const { User, JournalEntries } = require("./db");
-const { generateAccessToken } = require("./auth");
+const { generateAccessToken, verifyToken } = require("./auth");
 const jwt = require("jsonwebtoken");
+require('dotenv').config()
+console.log(process.env.JWT_SECRET)
 
 const app = express();
 app.use(express.json());
@@ -25,42 +27,61 @@ app.post('/users', async (req, res) => {
     res.sendStatus(201)
 })
 
-//logging into created account
+//logging into created account + gives me an access token
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     const user = await User.findOne({ where: { username } });
+    if (!user) {
+        return res.sendStatus(404)
+    }
     const passwordIsCorrect = await bcrypt.compare(password, user.passwordHash)
     if (passwordIsCorrect) {
-        const token = await generateAccessToken(user.id);
-        res.json(token)
+        try {
+            const token = await generateAccessToken(user.id);
+            res.json(token)
+        } catch (error) {
+            console.error(error)
+            res.sendStatus(500)
+        }
     } else {
         res.sendStatus(403)
     }
 })
 
-//delete user accounts
-app.delete('/users/:id', async (req, res) => {
-    const user = await User.findByPk(req.params.id);
+//delete user accounts with all journal entries included
+  app.delete("/users/:userId", async (req, res) => {
+    const user = await User.findByPk(req.params.userId);
+    await JournalEntries.destroy({
+      where: {
+        UserId: req.params.userId,
+      },
+    });
     await user.destroy();
     res.sendStatus(200);
-})
+  });
 
 // ENTRIES
-//create journal entry
-app.post('/users/:userId/entries', async (req, res) => {
-    const { text } = req.body;
-    await JournalEntries.create({ text })
-    res.sendStatus(201)
+//create journal entry + is linked to a user
+app.post('/users/:userId/entries', verifyToken, async (req, res) => {
+    const userId = req.userId;
+    if (userId != req.params.userId) {
+        console.log('no match')
+        return res.sendStatus(403);
+    }
+    const UserId = req.params.userId;
+    await JournalEntries.create({ title: req.body.title, text: req.body.text, UserId, });
+    res.sendStatus(201);
 })
 
 //show  all user journal entries
-app.get("users/:userId/entries", async (req, res) => {
+app.get("/users/:userId/entries", async (req, res) => {
     const UserId = req.params.userId;
-    await JournalEntry.findAll({
+    const entries = await JournalEntries.findAll({
         where: {
-            UserId: UserId,
+            UserId,
         },
     });
+    return res.send(entries)
 });
 
 //delete entries
@@ -75,5 +96,4 @@ app.delete('/users/:userId/entries/:entriesId', async (req, res) => {
     }
 })
 
-
-    module.exports = app
+module.exports = app
