@@ -1,9 +1,14 @@
 const { Sequelize, DataTypes, Model } = require("sequelize");
 const path = require('path')
 
+const dbPath = process.env.NODE_ENV === 'test'
+    ? ':memory:' 
+    : path.join(__dirname, "db.sqlite")
+
+
 const sequelize = new Sequelize({
     dialect: "sqlite",
-    storage: path.join(__dirname, "db.sqlite"),
+    storage: dbPath,
 });
 
 //instantiate users in database

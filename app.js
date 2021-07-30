@@ -22,6 +22,10 @@ app.get('/users/:id', (req, res) => {
 //creating an account
 app.post('/users', async (req, res) => {
     const { username, password } = req.body;
+    const userAlreadyExists = await User.findOne({ where: { username } });
+    if (userAlreadyExists) {
+        return res.sendStatus(400)
+    }
     const passwordHash = await bcrypt.hash(password, 10)
     await User.create({ username, passwordHash })
     res.sendStatus(201)
