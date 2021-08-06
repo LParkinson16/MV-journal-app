@@ -66,17 +66,19 @@ describe('journal test suite', () => {
         const response = await request(app)
             .post('/login')
             .send({ username, password });
-        expect(response.status).toBe(200)
+        expect(response.status).toBe(201)
         const userDoesExist = await User.findOne({
             where: { username },
         });
         expect(userDoesExist).toBeTruthy();
     })
 
-    test('can make a journal entry', verifyToken, async () => {
+    test('can make a journal entry', async () => {
+        const jwt = await generateAccessToken(1)
         const { username, password } = seedData
         const response = await request(app)
             .post('/users/1/entries')
+            .set('Authorization', 'Bearer' + jwt)
         expect(response.status).toBe(201)
         const createdEntry = await JournalEntries.create({ title: 'Test title One', text: 'lorem ipsum dolor doset', userId: 1 })
         expect(createdEntry).toBeTruthy()

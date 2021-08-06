@@ -24,11 +24,13 @@ app.post('/users', async (req, res) => {
     const { username, password } = req.body;
     const userAlreadyExists = await User.findOne({ where: { username } });
     if (userAlreadyExists) {
+        res.send('<h1>user already exists</h1>')
         return res.sendStatus(400)
     }
     const passwordHash = await bcrypt.hash(password, 10)
-    await User.create({ username, passwordHash })
-    res.sendStatus(201)
+     const user  = await User.create({ username, passwordHash })
+     const jwt = await generateAccessToken(user.id)
+     res.status(201).json({jwt,userId:user.id})
 })
 
 //logging into created account + gives me an access token
@@ -36,13 +38,14 @@ app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     const user = await User.findOne({ where: { username } });
     if (!user) {
+        res.send('<h1> Account does not exist, would you like to create one</h1>')
         return res.sendStatus(404)
     }
     const passwordIsCorrect = await bcrypt.compare(password, user.passwordHash)
     if (passwordIsCorrect) {
         try {
             const token = await generateAccessToken(user.id);
-            res.json(token)
+            res.status(201).send({token, userId:user.id})
         } catch (error) {
             console.error(error)
             res.sendStatus(500)
